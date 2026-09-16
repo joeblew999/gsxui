@@ -13,7 +13,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -67,7 +67,7 @@ jobs:
     # One deploy at a time; a queued deploy for a newer commit supersedes.
     concurrency: fly-deploy
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - run: flyctl deploy --remote-only
         env:

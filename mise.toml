@@ -6,12 +6,49 @@ goreleaser = "latest"
 packslip = "latest"
 
 # --- release: versioned CLI artifacts plus a packslip manifest -----------------
-# Pushing a tag runs .github/workflows/release.yml, which calls goreleaser and
-# then signs a packslip bundle shipping skills/gsxui/SKILL.md.
+# SSOT: the whole release is mise tasks. `mise run release v0.2.0` tags,
+# builds, signs the packslip with the workflow identity, and publishes.
+# .github/workflows/release.yml does the same on a tag push for CI.
 
 [tasks.release]
-description = "Publish a GitHub Release via GoReleaser (packslip manifest included by the workflow)"
-run = "goreleaser release --clean --config .goreleaser.yml"
+description = "Cut a release: tag <version> and push; CI builds, signs, publishes (needs gh auth)"
+usage = 'arg "<version>" help="Version to release, e.g. v0.2.0"'
+raw = true
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+version="$usage_version"
+case "$version" in v*) tag="$version";; *) tag="v$version";; esac
+if git rev-parse "$tag" >/dev/null 2>&1; then
+  echo "tag $tag already exists" >&2
+  exit 1
+fi
+if [ -n "$(git status --porcelain)" ]; then
+  echo "working tree is dirty; commit first" >&2
+  exit 1
+fi
+git tag "$tag"
+git push origin "$tag" main
+echo "tagged $tag; CI builds and publishes. Watch with: mise exec -- gh run list --limit 3"
+'''
+
+[tasks."release:publish"]
+description = "Build artifacts, sign the packslip manifest with the workflow identity, publish the GitHub Release (CI; locally use mise run release <version>)"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+goreleaser release --clean --config .goreleaser.yml
+slug=$(git remote get-url origin | sed -E 's#.*github.com[:/]([^/]+/[^/]+)(\.git)?$#\1#;s#\.git$##')
+mise exec -- packslip create --project "github.com/$slug" \
+  --version "${GITHUB_REF_NAME#v}" \
+  --out dist \
+  --bin gsxui --bin stylegen \
+  --resource 'skill/gsxui=repo:skills/gsxui' \
+  --source-repo "https://github.com/$slug" \
+  --commit "$GITHUB_SHA" --tag "$GITHUB_REF_NAME" \
+  dist/*.tar.gz
+gh release upload "$GITHUB_REF_NAME" dist/packslip.sigstore.json --clobber
+'''
 
 [tasks."release:snapshot"]
 description = "Build release artifacts locally without publishing"
