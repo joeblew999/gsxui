@@ -1,0 +1,53 @@
+version: 2
+
+project_name: gsxui
+
+builds:
+  - id: gsxui
+    main: ./cmd/gsxui
+    binary: gsxui
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -buildid=
+  - id: stylegen
+    main: ./cmd/stylegen
+    binary: stylegen
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -buildid=
+
+archives:
+  - formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: false
+    files: []
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  github:
+    owner: joeblew999
+    name: gsxui
+  replace_existing_artifacts: true
