@@ -47,7 +47,5 @@ checksum:
   name_template: checksums.txt
 
 release:
-  github:
-    owner: joeblew999
-    name: gsxui
+  # owner/name default to the repo goreleaser runs in; no hardcode.
   replace_existing_artifacts: true

@@ -24,14 +24,15 @@ run = '''
 set -euo pipefail
 mise run release:snapshot >/dev/null
 version=$(git describe --tags --always --dirty | sed 's/^v//')
+slug=$(git remote get-url origin | sed -E 's#.*github.com[:/]([^/]+/[^/]+)(\.git)?$#\1#;s#\.git$##')
 key=${RUNNER_TEMP:-/tmp}/packslip-test.key
 rm -f "$key" "$key.pub" "$key.b64"
 packslip keygen --out "$key"
-packslip create --project github.com/joeblew999/gsxui --version "$version" \
+packslip create --project "github.com/$slug" --version "$version" \
   --key "$key" --no-log --out dist \
   --bin gsxui --bin stylegen \
   --resource 'skill/gsxui=repo:skills/gsxui' \
-  --source-repo https://github.com/joeblew999/gsxui \
+  --source-repo "https://github.com/$slug" \
   --commit "$(git rev-parse HEAD)" --tag "$(git describe --tags --always)" \
   dist/*.tar.gz
 tail -1 "${key%.key}.pub" > "${key}.b64"
