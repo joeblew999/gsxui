@@ -9,3 +9,7 @@ jstest/.tmp/
 test-results/
 jstest/test-results/
 jstest/playwright-report/
+/dist/
+# mise packslip skill links, per developer
+.claude/skills/.mise-skills.json
+.claude/skills/dev

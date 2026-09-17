@@ -1,82 +1,51 @@
 # Everything this project does is a task below; `mise tasks` lists them.
+# The upstream way stays as it is (Makefile, workflows); this adds the stack's
+# tool for the release and the Fly deploy, so the fork needs nothing by hand.
 
 [tools]
 go = "1.27"
+"packslip:github.com/joeblew999/dev" = "0.2.0"   # the stack's tool; `dev` lists its verbs, its skill is .claude/skills/dev
 goreleaser = "latest"
 packslip = "latest"
+gh = "latest"
+flyctl = "latest"   # the showcase site deploys to Fly, as upstream does
 
-# --- release: versioned CLI artifacts plus a packslip manifest -----------------
-# SSOT: the whole release is mise tasks. `mise run release v0.2.0` tags,
-# builds, signs the packslip with the workflow identity, and publishes.
-# .github/workflows/release.yml does the same on a tag push for CI.
+[settings.skills]
+auto_sync = true
+prune = true
+
+# Exact packslip pins are signature-checked; the 24h wait only ever held CI.
+[settings]
+minimum_release_age_excludes = ["packslip:*"]
+
+# --- release: goreleaser from .goreleaser.yml (gsxui and stylegen), plus a
+# packslip manifest that ships skills/gsxui. Locally `mise run release <version>`
+# tags, builds, signs and publishes; CI's release.yml runs the same task on a
+# pushed tag and signs with the workflow's identity.
 
 [tasks.release]
-description = "Cut a release: tag <version> and push; CI builds, signs, publishes (needs gh auth)"
-usage = 'arg "<version>" help="Version to release, e.g. v0.2.0"'
+description = "publish a GitHub Release: <version> locally, the pushed tag in CI"
 raw = true
-run = '''
-#!/usr/bin/env bash
-set -euo pipefail
-version="$usage_version"
-case "$version" in v*) tag="$version";; *) tag="v$version";; esac
-if git rev-parse "$tag" >/dev/null 2>&1; then
-  echo "tag $tag already exists" >&2
-  exit 1
-fi
-if [ -n "$(git status --porcelain)" ]; then
-  echo "working tree is dirty; commit first" >&2
-  exit 1
-fi
-git tag "$tag"
-git push origin "$tag" main
-echo "tagged $tag; CI builds and publishes. Watch with: mise exec -- gh run list --limit 3"
-'''
-
-[tasks."release:publish"]
-description = "Build artifacts, sign the packslip manifest with the workflow identity, publish the GitHub Release (CI; locally use mise run release <version>)"
-run = '''
-#!/usr/bin/env bash
-set -euo pipefail
-goreleaser release --clean --config .goreleaser.yml
-slug=$(git remote get-url origin | sed -E 's#.*github.com[:/]([^/]+/[^/]+)(\.git)?$#\1#;s#\.git$##')
-mise exec -- packslip create --project "github.com/$slug" \
-  --version "${GITHUB_REF_NAME#v}" \
-  --out dist \
-  --bin gsxui --bin stylegen \
-  --resource 'skill/gsxui=repo:skills/gsxui' \
-  --source-repo "https://github.com/$slug" \
-  --commit "$GITHUB_SHA" --tag "$GITHUB_REF_NAME" \
-  dist/*.tar.gz
-gh release upload "$GITHUB_REF_NAME" dist/packslip.sigstore.json --clobber
-'''
+run = "dev release ."
 
 [tasks."release:snapshot"]
-description = "Build release artifacts locally without publishing"
-run = "goreleaser release --snapshot --clean --config .goreleaser.yml"
+description = "build the release, sign and verify its manifest, publish nothing"
+run = "dev release . --snapshot"
 
-[tasks."release:packslip"]
-description = "Build the packslip manifest for the local snapshot artifacts and verify it (no signing identity locally, so --no-log)"
-run = '''
-#!/usr/bin/env bash
-set -euo pipefail
-mise run release:snapshot >/dev/null
-version=$(git describe --tags --always --dirty | sed 's/^v//')
-slug=$(git remote get-url origin | sed -E 's#.*github.com[:/]([^/]+/[^/]+)(\.git)?$#\1#;s#\.git$##')
-key=${RUNNER_TEMP:-/tmp}/packslip-test.key
-rm -f "$key" "$key.pub" "$key.b64"
-packslip keygen --out "$key"
-packslip create --project "github.com/$slug" --version "$version" \
-  --key "$key" --no-log --out dist \
-  --bin gsxui --bin stylegen \
-  --resource 'skill/gsxui=repo:skills/gsxui' \
-  --source-repo "https://github.com/$slug" \
-  --commit "$(git rev-parse HEAD)" --tag "$(git describe --tags --always)" \
-  dist/*.tar.gz
-tail -1 "${key%.key}.pub" > "${key}.b64"
-packslip verify dist/packslip.sigstore.json --pubkey "${key}.b64" --allow-unlogged \
-  --artifact "$(ls dist/*.tar.gz | head -1)"
-packslip show dist/packslip.sigstore.json | head -20
-'''
+# --- the showcase site on Fly (fly.toml at the root, site/Dockerfile), deployed
+# from the repo root as upstream's workflow does.
+
+[tasks."site:deploy"]
+description = "deploy the site to Fly (FLY_API_TOKEN from fnox, or a flyctl login)"
+run = "dev deploy ."
+
+[tasks."site:url"]
+description = "the deployed site's URL"
+run = "dev url . --deployed"
+
+[tasks."site:logs"]
+description = "the deployed site's logs"
+run = "dev logs ."
 
 [tasks.test]
 description = "Run checks the way CI does"

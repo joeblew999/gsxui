@@ -28,6 +28,6 @@ jobs:
       # signing identity that packslip needs.
       - name: Build, sign, publish
         run: |
-          mise run release:publish
+          mise run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
