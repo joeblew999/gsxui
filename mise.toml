@@ -6,7 +6,7 @@
 [tools]
 go = "1.27"
 node = "22"   # the site's Vite build, as upstream's Dockerfile and CI use
-"packslip:github.com/joeblew999/dev" = { version = "0.4.3", pubkey = "RWQnLlj1BaHu39oBhUFxM3zEscQHqhxihLeTGyDAlavNFAOSTxQEHfoq" }   # the stack's tool; `dev` lists its verbs, its skill is .claude/skills/dev
+"packslip:github.com/joeblew999/dev" = { version = "0.4.4", pubkey = "RWQnLlj1BaHu39oBhUFxM3zEscQHqhxihLeTGyDAlavNFAOSTxQEHfoq" }   # the stack's tool; `dev` lists its verbs, its skill is .claude/skills/dev
 "packslip:github.com/jdx/fnox" = "1.35.2"
 "packslip:github.com/jdx/hk" = "2.0.1"
 jq = "latest"   # .claude/hooks/skill-gate reads the tool payload with it
