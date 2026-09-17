@@ -4,7 +4,7 @@
 
 [tools]
 go = "1.27"
-"packslip:github.com/joeblew999/dev" = "0.2.0"   # the stack's tool; `dev` lists its verbs, its skill is .claude/skills/dev
+"packslip:github.com/joeblew999/dev" = { version = "0.4.1", pubkey = "RWQnLlj1BaHu39oBhUFxM3zEscQHqhxihLeTGyDAlavNFAOSTxQEHfoq" }   # the stack's tool; `dev` lists its verbs, its skill is .claude/skills/dev; pubkey: what its releases are signed with
 goreleaser = "latest"
 packslip = "latest"
 gh = "latest"
@@ -19,14 +19,19 @@ prune = true
 minimum_release_age_excludes = ["packslip:*"]
 
 # --- release: goreleaser from .goreleaser.yml (gsxui and stylegen), plus a
-# packslip manifest that ships skills/gsxui. Locally `mise run release <version>`
-# tags, builds, signs and publishes; CI's release.yml runs the same task on a
-# pushed tag and signs with the workflow's identity.
+# packslip manifest that ships skills/gsxui. `mise run release <version>` tags,
+# builds, signs with the key in fnox and publishes; release.yml runs the same
+# on demand with the key from the Actions secret (mise run secrets:ci).
 
 [tasks.release]
-description = "publish a GitHub Release: <version> locally, the pushed tag in CI"
+description = "publish a GitHub Release: <version>, signed with the key in fnox (--keygen makes it)"
 raw = true
 run = "dev release ."
+
+[tasks."secrets:ci"]
+description = "give this repo's GitHub Actions a secret from fnox: <name>... (PACKSLIP_SIGNING_KEY for signed releases, FLY_API_TOKEN for upstream's deploy)"
+raw = true
+run = "dev secrets ci"
 
 [tasks."release:snapshot"]
 description = "build the release, sign and verify its manifest, publish nothing"
