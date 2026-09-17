@@ -1,14 +1,23 @@
 # Everything this project does is a task below; `mise tasks` lists them.
-# The upstream way stays as it is (Makefile, workflows); this adds the stack's
-# tool for the release and the Fly deploy, so the fork needs nothing by hand.
+# The upstream way stays as it is (Makefile, workflows); this repo is also on
+# the stack: mise, fnox, hk, packslip, `dev` for release and the Fly deploy,
+# and a pinned Claude Code session.
 
 [tools]
 go = "1.27"
-"packslip:github.com/joeblew999/dev" = { version = "0.4.1", pubkey = "RWQnLlj1BaHu39oBhUFxM3zEscQHqhxihLeTGyDAlavNFAOSTxQEHfoq" }   # the stack's tool; `dev` lists its verbs, its skill is .claude/skills/dev; pubkey: what its releases are signed with
+node = "22"   # the site's Vite build, as upstream's Dockerfile and CI use
+"packslip:github.com/joeblew999/dev" = { version = "0.4.3", pubkey = "RWQnLlj1BaHu39oBhUFxM3zEscQHqhxihLeTGyDAlavNFAOSTxQEHfoq" }   # the stack's tool; `dev` lists its verbs, its skill is .claude/skills/dev
+"packslip:github.com/jdx/fnox" = "1.35.2"
+"packslip:github.com/jdx/hk" = "2.0.1"
+jq = "latest"   # .claude/hooks/skill-gate reads the tool payload with it
 goreleaser = "latest"
 packslip = "latest"
 gh = "latest"
 flyctl = "latest"   # the showcase site deploys to Fly, as upstream does
+ripgrep = "latest"   # upstream's make audit
+
+[hooks]
+postinstall = { task = "bootstrap" }
 
 [settings.skills]
 auto_sync = true
@@ -18,24 +27,105 @@ prune = true
 [settings]
 minimum_release_age_excludes = ["packslip:*"]
 
-# --- release: goreleaser from .goreleaser.yml (gsxui and stylegen), plus a
-# packslip manifest that ships skills/gsxui. `mise run release <version>` tags,
-# builds, signs with the key in fnox and publishes; release.yml runs the same
-# on demand with the key from the Actions secret (mise run secrets:ci).
+[vars]
+worker = "."   # the deployed command whose secrets secrets:* manage: the site, fly.toml at the root
 
-[tasks.release]
-description = "publish a GitHub Release: <version>, signed with the key in fnox (--keygen makes it)"
+# ==============================================================================
+# The stack
+# ==============================================================================
+
+[tasks.lint]
+description = "hk checks: gofmt, vet, tidy, whitespace, secrets"
+run = "hk check --all"
+
+[tasks.test]
+description = "lint, the session and hook checks, then the project's own check"
+run = [
+  "mise run lint",
+  "mise run session:check",
+  "mise run hooks:check",
+  "mise run check",
+]
+
+[tasks.bootstrap]
+description = "wire a fresh clone: skills, settings, git hooks (runs after mise install)"
+depends = ["session:sync"]
+run = [
+  "mise skills sync",
+  "hk install",
+]
+
+[tasks."session:sync"]
+description = "write .claude/skills and the settings.json keys from session.toml"
+run = "dev session sync"
+
+[tasks."session:check"]
+hide = true
+run = "dev session check"
+
+[tasks."session:verify"]
+description = "hold a fresh Claude Code session against SESSION.lock (pre-push; --update re-records)"
+run = "dev session verify"
+
+[tasks."session:bump"]
+description = "move a pin in session.toml to upstream HEAD (one source, or all)"
 raw = true
-run = "dev release ."
+run = "dev session bump"
+
+[tasks."hooks:check"]
+description = "prove the Claude Code skill hook fires on every write and no read"
+run = ".claude/hooks/skill-gate.test"
+
+[tasks."session:mcp"]
+description = "every MCP server .mcp.json declares connects"
+run = "dev session mcp"
+
+[tasks."deps:list"]
+description = "Go module upgrades available, in every module"
+run = "dev deps list"
+
+[tasks."deps:upgrade"]
+description = "upgrade Go modules interactively, in every module"
+raw = true
+run = "dev deps upgrade"
+
+[tasks."secrets:set"]
+description = "store a secret in fnox and push it to the deployed app: <name> [--generate] [--if-missing]"
+raw = true
+run = 'dev secrets set {{vars.worker}} --names "$(mise run secrets:list)"'
+
+[tasks."secrets:push"]
+description = "push every secret the app needs from fnox, naming any missing"
+run = "mise run secrets:list | dev secrets push {{vars.worker}}"
 
 [tasks."secrets:ci"]
 description = "give this repo's GitHub Actions a secret from fnox: <name>... (PACKSLIP_SIGNING_KEY for signed releases, FLY_API_TOKEN for upstream's deploy)"
 raw = true
 run = "dev secrets ci"
 
+[tasks.release]
+description = "publish a GitHub Release: <version>, signed with the key in fnox (--keygen makes it)"
+raw = true
+run = "dev release ."
+
 [tasks."release:snapshot"]
 description = "build the release, sign and verify its manifest, publish nothing"
 run = "dev release . --snapshot"
+
+# ==============================================================================
+# This project
+# ==============================================================================
+
+[tasks."npm:ci"]
+hide = true
+sources = ["package.json", "package-lock.json"]
+outputs = ["node_modules/.package-lock.json"]
+run = "npm ci --no-audit --no-fund"
+
+[tasks.check]
+description = "what test runs here: upstream's own check (make check), after npm ci"
+depends = ["npm:ci"]
+run = "make check"
 
 # --- the showcase site on Fly (fly.toml at the root, site/Dockerfile), deployed
 # from the repo root as upstream's workflow does.
@@ -52,6 +142,17 @@ run = "dev url . --deployed"
 description = "the deployed site's logs"
 run = "dev logs ."
 
-[tasks.test]
-description = "Run checks the way CI does"
-run = "make check"
+[tasks."site:delete"]
+description = "destroy the deployed site [--name OLD] [--yes]"
+raw = true
+run = "dev delete ."
+
+# What deploy runs first, and the NAME<TAB>OWNER lines secrets:* work from.
+[tasks.validate]
+hide = true
+run = "true"
+
+[tasks."secrets:list"]
+hide = true
+quiet = true
+run = "true"

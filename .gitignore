@@ -13,3 +13,5 @@ jstest/playwright-report/
 # mise packslip skill links, per developer
 .claude/skills/.mise-skills.json
 .claude/skills/dev
+.claude/skills/hk-configure
+.claude/skills/hk-debug
