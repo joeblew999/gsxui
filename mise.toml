@@ -4,7 +4,6 @@
 # and a pinned Claude Code session.
 
 [tools]
-go = "1.27"
 node = "22"   # the site's Vite build, as upstream's Dockerfile and CI use
 "packslip:github.com/joeblew999/dev" = { version = "0.4.4", pubkey = "RWQnLlj1BaHu39oBhUFxM3zEscQHqhxihLeTGyDAlavNFAOSTxQEHfoq" }   # the stack's tool; `dev` lists its verbs, its skill is .claude/skills/dev
 "packslip:github.com/jdx/fnox" = "1.35.2"
@@ -25,6 +24,7 @@ prune = true
 
 # Exact packslip pins are signature-checked; the 24h wait only ever held CI.
 [settings]
+idiomatic_version_file_enable_tools = ["go"]
 minimum_release_age_excludes = ["packslip:*"]
 
 [vars]

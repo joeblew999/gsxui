@@ -2,6 +2,8 @@ module github.com/gsxhq/gsxui
 
 go 1.26.1
 
+toolchain go1.27.1
+
 require (
 	github.com/gsxhq/gsx v0.0.0-20260818100222-b92b71254c2d
 	github.com/gsxhq/vite v0.3.2
