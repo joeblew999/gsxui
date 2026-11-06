@@ -1,0 +1,22 @@
+# This fork's own tools, on top of upstream's main as it is (its Makefile, its workflow): what releases its binaries
+# (mise run release: release.yml runs it on a v* tag) and what moves its Go modules (mise run deps:upgrade).
+
+[settings]
+# go.mod's go line is the Go pin; this makes mise install honour it.
+idiomatic_version_file_enable_tools = ["go"]
+
+[tools]
+goreleaser = "2.18.2"
+"github:oligot/go-mod-upgrade" = "0.13.0"
+
+[tasks.release]
+description = "The GitHub Release of the commit's v* tag: gsxui and gsxui-stylegen (cmd/stylegen), for Linux, macOS and Windows (goreleaser, GITHUB_TOKEN)"
+run = "goreleaser release --clean"
+
+[tasks."release:snapshot"]
+description = "The release built in dist/, published nowhere"
+run = "goreleaser release --snapshot --clean"
+
+[tasks."deps:upgrade"]
+description = "Pick the Go modules to move to their newest versions (go-mod-upgrade), then go mod tidy"
+run = "go-mod-upgrade && go mod tidy"

@@ -9,3 +9,6 @@ jstest/.tmp/
 test-results/
 jstest/test-results/
 jstest/playwright-report/
+
+# goreleaser (mise run release:snapshot)
+/dist/

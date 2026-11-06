@@ -1,0 +1,37 @@
+# This fork's release: on a v* tag, its GitHub Release with gsxui and gsxui-stylegen for Linux, macOS and Windows
+# (mise run release: goreleaser, .goreleaser.yml). Shell steps only: no JavaScript actions.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      MISE_YES: "1"
+    steps:
+      - name: Check out the tag with git (no actions/checkout)
+        run: |
+          git init -q .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git fetch -q --depth 1 origin "+${GITHUB_REF}:${GITHUB_REF}"
+          git checkout -q --detach "${GITHUB_REF}"
+          git log --oneline -1
+
+      - name: mise and the pinned tools
+        run: |
+          curl -fsSL https://mise.run | MISE_QUIET=1 sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.local/bin:$PATH"
+          mise trust -q mise.toml
+          mise install
+
+      - name: The release (mise run release)
+        run: mise run release

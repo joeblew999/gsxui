@@ -1,0 +1,37 @@
+# This fork's release (mise run release): one archive per OS and architecture holding gsxui and gsxui-stylegen
+# (cmd/stylegen), so mise installs both from it (github:joeblew999/gsxui).
+version: 2
+
+project_name: gsxui
+
+builds:
+  - id: gsxui
+    main: ./cmd/gsxui
+    binary: gsxui
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s -w -buildid=]
+  - id: gsxui-stylegen
+    main: ./cmd/stylegen
+    binary: gsxui-stylegen
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s -w -buildid=]
+
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files: [LICENSE, NOTICE.md]
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  disable: true
